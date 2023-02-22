@@ -1,7 +1,9 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { GatewayIntentBits } from "discord.js";
+
 import { NecordModule } from "necord";
+import { GatewayIntentBits } from "discord.js";
+import { DiscordModule } from "./discord/discord.module";
 
 @Module({
     imports: [
@@ -10,6 +12,7 @@ import { NecordModule } from "necord";
             token: process.env.BOT_TOKEN ?? "",
             intents: [GatewayIntentBits.Guilds],
         }),
+        DiscordModule
     ],
 })
 export class AppModule {}
