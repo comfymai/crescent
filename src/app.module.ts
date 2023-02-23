@@ -4,6 +4,7 @@ import { NecordModule } from "necord";
 import { GatewayIntentBits } from "discord.js";
 import { DiscordModule } from "./discord/discord.module";
 import { MiscModule } from "./misc/misc.module";
+import { RandomModule } from "./random/random.module";
 
 @Module({
     imports: [
@@ -12,7 +13,8 @@ import { MiscModule } from "./misc/misc.module";
             intents: [GatewayIntentBits.Guilds],
         }),
         DiscordModule,
-        MiscModule
+        MiscModule,
+        RandomModule
     ],
 })
 export class AppModule {}
