@@ -29,7 +29,7 @@ export class RandomCommands {
     ) {
         if (!min) min = 0;
 
-        const picked = Math.floor(Math.random() * max) + min;
+        const picked = Math.floor(Math.random() * (max - min)) + min;
         return interaction.reply(`${picked}!`);
     }
 
