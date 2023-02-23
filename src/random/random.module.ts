@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { RandomCommands } from "./random.commands";
+import { RandomCommands } from "./commands";
 
 @Module({
     providers: [RandomCommands],

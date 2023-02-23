@@ -1,14 +1,15 @@
-import { Injectable } from "@nestjs/common";
 import {
     Context,
     createCommandGroupDecorator,
-    NumberOption,
     Options,
     SlashCommandContext,
-    StringOption,
     Subcommand,
 } from "necord";
-import { getDevelopmentGuilds } from "src/helpers/getDevelopmentGuilds";
+
+import { getDevelopmentGuilds } from "@app/helpers/getDevelopmentGuilds";
+
+import { ChoiceOptions } from "./options/choice";
+import { NumberOptions } from "./options/number";
 
 const RandomGroup = createCommandGroupDecorator({
     name: "random",
@@ -16,32 +17,6 @@ const RandomGroup = createCommandGroupDecorator({
     guilds: getDevelopmentGuilds(),
 });
 
-class NumberOptions {
-    @NumberOption({
-        name: "max",
-        description: "The largest number that can be picked, exclusive.",
-        required: true,
-    })
-    max: number;
-
-    @NumberOption({
-        name: "min",
-        description:
-            "The smallest number that can be picked, inclusive. Defaults to 0.",
-    })
-    min?: number;
-}
-
-class ChoiceOptions {
-    @StringOption({
-        name: "items",
-        description: "A list of items, separated by commas.",
-        required: true
-    })
-    items: string;
-}
-
-@Injectable()
 @RandomGroup()
 export class RandomCommands {
     @Subcommand({
@@ -70,12 +45,15 @@ export class RandomCommands {
         if (itemsString.indexOf(",") == -1)
             return interaction.reply(`Please provide at least two items.`);
 
-        const items = itemsString.split(",").filter(item => item.length > 0)
+        const items = itemsString
+            .split(",")
+            .filter(item => item.length > 0)
+            .map(item => item.trim());
 
         if (items.length < 2)
             return interaction.reply(`Please provide at least two items.`);
 
-        const selectedItem = items[Math.floor(Math.random() * items.length)]
-        return interaction.reply(`${selectedItem}!`)
+        const selectedItem = items[Math.floor(Math.random() * items.length)];
+        return interaction.reply(`${selectedItem}!`);
     }
 }

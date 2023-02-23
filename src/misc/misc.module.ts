@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { MiscCommands } from "./misc.commands";
+import { MiscCommands } from "./commands";
 
 @Module({
     providers: [MiscCommands],
