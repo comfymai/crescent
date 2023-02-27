@@ -1,11 +1,12 @@
-import { Spark } from "@core/spark";
-import { joinVoiceChannel } from "@discordjs/voice";
+import { Logger } from "@nestjs/common";
+import { ChannelType } from "discord.js";
 import {
     Context,
     createCommandGroupDecorator,
     SlashCommandContext,
     Subcommand,
 } from "necord";
+import { SessionManager } from "../session.manager";
 
 const YoutubeGroup = createCommandGroupDecorator({
     name: "youtube",
@@ -14,10 +15,9 @@ const YoutubeGroup = createCommandGroupDecorator({
 });
 
 @YoutubeGroup()
-export class YoutubeSpells extends Spark {
-    constructor() {
-        super();
-    }
+export class YoutubeSpells {
+    private readonly logger = new Logger(YoutubeSpells.name);
+    constructor(private readonly sessions: SessionManager) {}
 
     @Subcommand({
         name: "join",
@@ -30,19 +30,19 @@ export class YoutubeSpells extends Spark {
             return interaction.reply("Failed to find you, try again later.");
         }
 
-        const isMemberInVC = member.voice.channel != null;
-        if (!isMemberInVC)
+        if (member.voice.channel == null)
             return interaction.reply(
-                `You must be in a voice channel to use this command.`
+                "You must be in a voice channel to use this command."
             );
 
-        const vc = member.voice.channel;
-        joinVoiceChannel({
-            channelId: vc.id,
-            guildId: vc.guildId,
-            adapterCreator: vc.guild.voiceAdapterCreator,
-        });
+        if (member.voice.channel.type != ChannelType.GuildVoice)
+            return interaction.reply(`You must be in a normal voice channel!`);
 
-        return interaction.reply("Joined!");
+        const session = this.sessions.create(member.voice.channel);
+        if (session) return interaction.reply("Joined!");
+        else
+            return interaction.reply(
+                "I'm already connected to a voice channel in this guild."
+            );
     }
 }
