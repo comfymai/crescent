@@ -7,16 +7,16 @@ export class LifetimeListener {
 
     @Once("ready")
     public handleReady(@Context() [context]: ContextOf<"ready">) {
-        this.logger.log(`ready as "${context.user.tag}"!`)
+        this.logger.log(`Ready as "${context.user.tag}"!`)
     }
 
     @On("error")
     public handleError(@Context() [error]: ContextOf<"error">) {
-        this.logger.error(`received an error: ${error}`)
+        this.logger.error(`Received an error: ${error}`)
     }
 
     @On("warn")
     public handleWarn(@Context() [warn]: ContextOf<"warn">) {
-        this.logger.warn(`received a warning: ${warn}`)
+        this.logger.warn(`Received a warning: ${warn}`)
     }
 }

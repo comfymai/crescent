@@ -1,3 +1,4 @@
+import { getDevelopmentGuilds } from "@app/helpers/getDevelopmentGuilds";
 import { Logger } from "@nestjs/common";
 import { ChannelType } from "discord.js";
 import {
@@ -12,6 +13,7 @@ const YoutubeGroup = createCommandGroupDecorator({
     name: "youtube",
     description:
         "A group of commands to interact with YouTube videos in voice chats.",
+    guilds: getDevelopmentGuilds(),
 });
 
 @YoutubeGroup()
@@ -39,10 +41,42 @@ export class YoutubeSpells {
             return interaction.reply(`You must be in a normal voice channel!`);
 
         const session = this.sessions.create(member.voice.channel);
-        if (session) return interaction.reply("Joined!");
+        if (session) return interaction.reply("Joined your voice channel.");
         else
             return interaction.reply(
                 "I'm already connected to a voice channel in this guild."
             );
+    }
+
+    @Subcommand({
+        name: "leave",
+        description: "Closes any existing voice connections in this guild.",
+    })
+    public async handleLeave(@Context() [interaction]: SlashCommandContext) {
+        const guild = interaction.guild;
+        if (guild == null)
+            return interaction.reply({
+                content: "This command can only be used in a guild",
+                ephemeral: true,
+            });
+
+        const session = this.sessions.getById(guild.id);
+        if (session == null)
+            return interaction.reply({
+                content: "There's no voice connections in this guild",
+                ephemeral: true,
+            });
+
+        const disconnected = this.sessions.disconnect(session.id);
+        if (disconnected)
+            return interaction.reply({
+                content: "Bye, bye!",
+                ephemeral: true,
+            });
+        else
+            return interaction.reply({
+                content: "Something wrong happened while trying to disconnect.",
+                ephemeral: true,
+            });
     }
 }

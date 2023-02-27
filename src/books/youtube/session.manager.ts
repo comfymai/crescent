@@ -1,15 +1,19 @@
 import { Nullable } from "@app/helpers/types";
-import { joinVoiceChannel } from "@discordjs/voice";
+import {
+    getVoiceConnection,
+    joinVoiceChannel,
+    VoiceConnection,
+} from "@discordjs/voice";
 import { Injectable, Logger } from "@nestjs/common";
-import { VoiceChannel } from "discord.js";
+import { Collection, VoiceChannel } from "discord.js";
 
 @Injectable()
 export class SessionManager {
-    private readonly logger = new Logger(SessionManager.name)
-    public readonly sessions: Session[];
+    private readonly logger = new Logger(SessionManager.name);
+    public readonly sessions: Collection<string, Session>;
 
     constructor() {
-        this.sessions = [];
+        this.sessions = new Collection();
     }
 
     public create(channel: VoiceChannel): Nullable<Session> {
@@ -24,7 +28,7 @@ export class SessionManager {
             guildId: channel.guild.id,
         });
 
-        this.sessions.push(session);
+        this.sessions.set(session.id, session);
         this.logger.debug(
             `Created and added session to manager. (ID ${session.id})`
         );
@@ -39,8 +43,25 @@ export class SessionManager {
         return session;
     }
 
-    public getById(id: string) {
-        return this.sessions.find(session => session.id === id);
+    public getById(id: string): Nullable<Session> {
+        return this.sessions.find(session => session.id === id) ?? null;
+    }
+
+    public disconnect(id: string): boolean {
+        const session = this.getById(id);
+        if (session == null) return false;
+
+        const disconnected = session.disconnect();
+        if (disconnected) {
+            this.sessions.delete(session.id);
+            this.logger.debug(`Tossed connection/${session.id} into the void.`);
+            return true;
+        } else {
+            this.logger.warn(
+                "Failed to diconnect session because its connection couldn't be acquired. This should never happen."
+            );
+            return false;
+        }
     }
 }
 
@@ -54,5 +75,29 @@ export class Session {
         return new Session(guildId);
     }
 
-    private constructor(public readonly id: string) {}
+    private readonly logger: Logger;
+
+    private constructor(public readonly id: string) {
+        this.logger = new Logger(`Session/${id}`);
+    }
+
+    public disconnect(): boolean {
+        const connection = this.connection;
+
+        if (connection == null) {
+            this.logger.warn(
+                "Attempt to disconnect session failed, there's no connection."
+            );
+            return false;
+        } else {
+            connection.disconnect();
+            connection.destroy();
+            this.logger.debug("Disconnected and destroyed.");
+            return true;
+        }
+    }
+
+    public get connection(): Nullable<VoiceConnection> {
+        return getVoiceConnection(this.id) ?? null;
+    }
 }
