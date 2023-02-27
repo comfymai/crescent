@@ -18,7 +18,7 @@ const RandomGroup = createCommandGroupDecorator({
 });
 
 @RandomGroup()
-export class RandomCommands {
+export class RandomSpells {
     @Subcommand({
         name: "number",
         description: "Picks a random number in a given range.",

@@ -23,7 +23,8 @@
         "strictFunctionTypes": true,
         "strictPropertyInitialization": false,
         "paths": {
-            "@app/*": ["./src/*"]
+            "@app/*": ["./src/*"],
+            "@core/*": ["./src/core/*"]
         }
     }
 }

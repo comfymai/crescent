@@ -10,7 +10,7 @@ const MiscGroup = createCommandGroupDecorator({
 })
 
 @MiscGroup()
-export class MiscCommands {
+export class MiscSpells {
     @Subcommand({
         name: "httpcat",
         description: "Shows an HTTP kitty!",
