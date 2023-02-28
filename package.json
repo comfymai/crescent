@@ -29,7 +29,8 @@
     "libsodium-wrappers": "^0.7.11",
     "necord": "^5.4.5",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.2.0"
+    "rxjs": "^7.2.0",
+    "ytdl-core": "^4.11.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^9.0.0",

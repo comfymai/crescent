@@ -9,7 +9,7 @@ import {
 } from "necord";
 import { SessionManager } from "../session.manager";
 
-const YoutubeGroup = createCommandGroupDecorator({
+export const YoutubeGroup = createCommandGroupDecorator({
     name: "youtube",
     description:
         "A group of commands to interact with YouTube videos in voice chats.",
@@ -52,6 +52,7 @@ export class YoutubeSpells {
         name: "leave",
         description: "Closes any existing voice connections in this guild.",
     })
+
     public async handleLeave(@Context() [interaction]: SlashCommandContext) {
         const guild = interaction.guild;
         if (guild == null)

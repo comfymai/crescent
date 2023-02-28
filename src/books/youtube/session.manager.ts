@@ -1,11 +1,17 @@
 import { Nullable } from "@app/helpers/types";
 import {
+    AudioPlayer,
+    AudioPlayerStatus,
+    createAudioPlayer,
     getVoiceConnection,
     joinVoiceChannel,
+    NoSubscriberBehavior,
     VoiceConnection,
 } from "@discordjs/voice";
 import { Injectable, Logger } from "@nestjs/common";
 import { Collection, VoiceChannel } from "discord.js";
+
+import { createResourceFrom } from "./helpers/createResourceFrom";
 
 @Injectable()
 export class SessionManager {
@@ -25,20 +31,13 @@ export class SessionManager {
         }
 
         const session = Session.create({
-            guildId: channel.guild.id,
+            channel,
         });
 
         this.sessions.set(session.id, session);
         this.logger.debug(
             `Created and added session to manager. (ID ${session.id})`
         );
-
-        joinVoiceChannel({
-            channelId: channel.id,
-            guildId: channel.guild.id,
-            adapterCreator: channel.guild.voiceAdapterCreator,
-        });
-        this.logger.debug(`Joined voice channel.`);
 
         return session;
     }
@@ -58,7 +57,7 @@ export class SessionManager {
             return true;
         } else {
             this.logger.warn(
-                "Failed to diconnect session because its connection couldn't be acquired. This should never happen."
+                "Failed to diconnect session because its connection couldn't be acquired. This may happen if the bot hasn't finished connecting."
             );
             return false;
         }
@@ -66,19 +65,85 @@ export class SessionManager {
 }
 
 interface SessionOptions {
-    guildId: string;
+    channel: VoiceChannel;
+}
+
+interface Track {
+    url: string;
 }
 
 export class Session {
     public static create(options: SessionOptions) {
-        const { guildId } = options;
-        return new Session(guildId);
+        const { channel } = options;
+        return new Session(channel);
     }
 
     private readonly logger: Logger;
 
-    private constructor(public readonly id: string) {
-        this.logger = new Logger(`Session/${id}`);
+    public readonly id: string;
+    public readonly player: AudioPlayer;
+    public readonly queuedTracks: Track[]
+    public currentTrack: Nullable<Track>;
+
+    private constructor(channel: VoiceChannel) {
+        this.logger = new Logger(`Session/${channel.guild.id}`);
+
+        this.id = channel.guild.id;
+        this.player = createAudioPlayer({
+            behaviors: {
+                noSubscriber: NoSubscriberBehavior.Pause,
+            },
+        });
+        this.queuedTracks = [];
+        this.currentTrack = null;
+
+        const connection = joinVoiceChannel({
+            channelId: channel.id,
+            guildId: channel.guild.id,
+            adapterCreator: channel.guild.voiceAdapterCreator,
+        });
+        this.logger.debug(`Joined voice channel.`);
+
+        connection.subscribe(this.player);
+
+        this.player.on("stateChange", (before, after) => {
+            if (
+                before.status == AudioPlayerStatus.Playing &&
+                after.status == AudioPlayerStatus.Idle
+            ) {
+                const next = this.nextTrack;
+
+                if (next == null) {
+                    this.logger.debug(`Done playing all tracks.`);
+                    this.currentTrack = null;
+                } else {
+                    const resource = createResourceFrom(next.url);
+                    this.player.play(resource);
+                    this.currentTrack = {
+                        url: next.url,
+                    };
+                    this.queuedTracks.shift()
+                }
+            }
+        });
+    }
+
+    public addTrack(url: string): 'queued' | 'playing' {
+        if (this.currentTrack == null) {
+            this.currentTrack = {
+                url,
+            };
+            const resource = createResourceFrom(url);
+            this.player.play(resource);
+            this.logger.debug(`Playing track: "${url}".`);
+            return 'playing'
+        } else {
+            this.queuedTracks.push({
+                url
+            })
+            this.logger.debug(`Queued track: "${url}".`);
+            return 'queued'
+        }
     }
 
     public disconnect(): boolean {
@@ -99,5 +164,9 @@ export class Session {
 
     public get connection(): Nullable<VoiceConnection> {
         return getVoiceConnection(this.id) ?? null;
+    }
+
+    public get nextTrack(): Nullable<Track> {
+        return this.queuedTracks[0] ?? null;
     }
 }
