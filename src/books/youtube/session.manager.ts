@@ -46,6 +46,15 @@ export class SessionManager {
         return this.sessions.find(session => session.id === id) ?? null;
     }
 
+    public getOrCreate(channel: VoiceChannel): Session {
+        const existingSession = this.getById(channel.guild.id)
+        return existingSession == null ? (() => {
+            const session = Session.create({ channel }) 
+            this.sessions.set(session.id, session)
+            return session
+        })() : existingSession;
+    }
+
     public disconnect(id: string): boolean {
         const session = this.getById(id);
         if (session == null) return false;

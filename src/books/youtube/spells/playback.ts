@@ -1,16 +1,15 @@
-import { Nullable } from "@app/helpers/types";
 import { Logger } from "@nestjs/common";
 import { ChannelType } from "discord.js";
 import { Context, Options, SlashCommandContext, Subcommand } from "necord";
 
 import { YoutubeGroup } from ".";
-import { Session, SessionManager } from "../session.manager";
+import { SessionManager } from "../session.manager";
 import { PlayIngredients } from "./ingredients/playback";
 
 @YoutubeGroup()
 export class PlaybackSpells {
-    private readonly logger = new Logger(PlaybackSpells.name)
-    constructor(private sessions: SessionManager) {}
+    private readonly logger = new Logger(PlaybackSpells.name);
+    constructor(private sessions: SessionManager) { }
 
     @Subcommand({
         name: "play",
@@ -27,38 +26,24 @@ export class PlaybackSpells {
                 ephemeral: true,
             });
 
-        const session = <Nullable<Session>> await (async () => {
-            const existingSession = this.sessions.getById(guild.id)
-            if (existingSession) return existingSession
+        const member = await guild.members.fetch(interaction.user);
+        if (!member) {
+            this.logger.warn("Failed to find member.");
+            return interaction.reply("Failed to find you, try again later.");
+        }
+        if (member.voice.channel == null) {
+            interaction.reply(
+                "You must be in a voice channel to use this command."
+            );
+            return null;
+        }
 
-            const member = await guild.members.fetch(interaction.user);
-            if (!member) {
-                this.logger.warn("Failed to find member.");
-                interaction.reply(
-                    "Failed to find you, try again later."
-                );
-                return null
-            }
+        if (member.voice.channel.type != ChannelType.GuildVoice) {
+            interaction.reply(`You must be in a normal voice channel!`);
+            return null;
+        }
 
-            if (member.voice.channel == null) {
-                interaction.reply(
-                    "You must be in a voice channel to use this command."
-                );
-                return null
-            }
-
-            if (member.voice.channel.type != ChannelType.GuildVoice) {
-                interaction.reply(
-                    `You must be in a normal voice channel!`
-                );
-                return null
-            }
-
-            const session = this.sessions.create(member.voice.channel);
-            return session
-        })()
-
-        if (session == null) return;
+        const session = this.sessions.getOrCreate(member.voice.channel)
 
         const connection = session.connection;
         if (connection == null)
