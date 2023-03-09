@@ -1,3 +1,4 @@
+import { ReplyBuilder } from "@app/core/reply.builder";
 import { Logger } from "@nestjs/common";
 import { ChannelType } from "discord.js";
 import { Context, Options, SlashCommandContext, Subcommand } from "necord";
@@ -9,7 +10,7 @@ import { PlayIngredients } from "./ingredients/playback";
 @YoutubeGroup()
 export class PlaybackSpells {
     private readonly logger = new Logger(PlaybackSpells.name);
-    constructor(private sessions: SessionManager) { }
+    constructor(private sessions: SessionManager) {}
 
     @Subcommand({
         name: "play",
@@ -21,41 +22,78 @@ export class PlaybackSpells {
     ) {
         const guild = interaction.guild;
         if (guild == null)
-            return interaction.reply({
-                content: "You cannot use this command outside of a guild.",
-                ephemeral: true,
-            });
+            return interaction.reply(
+                ReplyBuilder.create()
+                    .addWarning({
+                        description:
+                            "You cannot use this command outside of a guild.",
+                    })
+                    .setEphemeral()
+                    .build()
+            );
 
-        const member = await guild.members.fetch(interaction.user);
-        if (!member) {
+        const member = await guild.members
+            .fetch(interaction.user)
+            .catch(() => null);
+        if (member == null) {
             this.logger.warn("Failed to find member.");
-            return interaction.reply("Failed to find you, try again later.");
+            return interaction.reply(
+                ReplyBuilder.create()
+                    .addError({
+                        description: "Failed to find you, try again later.",
+                    })
+                    .setEphemeral()
+                    .build()
+            );
         }
         if (member.voice.channel == null) {
             interaction.reply(
-                "You must be in a voice channel to use this command."
+                ReplyBuilder.create()
+                    .addWarning({
+                        description:
+                            "You must be in a voice channel to use this command.",
+                    })
+                    .setEphemeral()
+                    .build()
             );
             return null;
         }
 
         if (member.voice.channel.type != ChannelType.GuildVoice) {
-            interaction.reply(`You must be in a normal voice channel!`);
+            interaction.reply(
+                ReplyBuilder.create()
+                    .addWarning({
+                        description: "You must be in a normal voice channel.",
+                    })
+                    .build()
+            );
             return null;
         }
 
-        const session = this.sessions.getOrCreate(member.voice.channel)
+        const session = this.sessions.getOrCreate(member.voice.channel);
 
         const connection = session.connection;
         if (connection == null)
-            return interaction.reply({
-                content:
-                    "The connection is being estabilished, try again in a bit.",
-                ephemeral: true,
-            });
+            return interaction.reply(
+                ReplyBuilder.create()
+                    .addWarning({
+                        description:
+                            "The connection is being estabilished, try again in a bit.",
+                    })
+                    .setEphemeral()
+                    .build()
+            );
 
         const trackStatus = session.addTrack(url);
-        if (trackStatus == "playing")
-            return interaction.reply(`Now playing track from: ${url}.`);
-        else return interaction.reply(`Track queued: ${url}.`);
+        return interaction.reply(
+            ReplyBuilder.create()
+                .addEmbed({
+                    description:
+                        trackStatus === "playing"
+                            ? `Now playing track from ${url}`
+                            : `Track queued from ${url}.`,
+                })
+                .build()
+        );
     }
 }

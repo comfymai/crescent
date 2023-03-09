@@ -1,10 +1,8 @@
+import { ReplyBuilder } from "@app/core/reply.builder";
 import { Logger } from "@nestjs/common";
 import { ChannelType } from "discord.js";
-import {
-    Context,
-    SlashCommandContext,
-    Subcommand,
-} from "necord";
+import { Context, SlashCommandContext, Subcommand } from "necord";
+
 import { YoutubeGroup } from ".";
 import { SessionManager } from "../session.manager";
 
@@ -21,22 +19,57 @@ export class SessionSpells {
         const member = await interaction.guild?.members.fetch(interaction.user);
         if (!member) {
             this.logger.warn("Failed to find member.");
-            return interaction.reply("Failed to find you, try again later.");
+            return interaction.reply(
+                ReplyBuilder.create()
+                    .addError({
+                        title: "Error",
+                        description: "Failed to find you, try again later",
+                    })
+                    .build()
+            );
         }
 
         if (member.voice.channel == null)
             return interaction.reply(
-                "You must be in a voice channel to use this command."
+                ReplyBuilder.create()
+                    .addWarning({
+                        title: "You are forgetting something...",
+                        description:
+                            "You must be in a voice channel to use this command.",
+                    })
+                    .build()
             );
 
         if (member.voice.channel.type != ChannelType.GuildVoice)
-            return interaction.reply(`You must be in a normal voice channel!`);
+            return interaction.reply(
+                ReplyBuilder.create()
+                    .addWarning({
+                        title: "Unsupported Channel",
+                        description:
+                            "You must be in a regular voice channel to use this command.",
+                    })
+                    .build()
+            );
 
         const session = this.sessions.create(member.voice.channel);
-        if (session) return interaction.reply("Joined your voice channel.");
+        if (session)
+            return interaction.reply(
+                ReplyBuilder.create()
+                    .addSuccess({
+                        title: "Joined",
+                        description:
+                            "Created a connection in your voice channel.",
+                    })
+                    .build()
+            );
         else
             return interaction.reply(
-                "I'm already connected to a voice channel in this guild."
+                ReplyBuilder.create()
+                    .addWarning({
+                        description:
+                            "There's already a connection on this guild.",
+                    })
+                    .build()
             );
     }
 
@@ -47,28 +80,49 @@ export class SessionSpells {
     public async handleLeave(@Context() [interaction]: SlashCommandContext) {
         const guild = interaction.guild;
         if (guild == null)
-            return interaction.reply({
-                content: "This command can only be used in a guild",
-                ephemeral: true,
-            });
+            return interaction.reply(
+                ReplyBuilder.create()
+                    .addWarning({
+                        description:
+                            "This command can only be used in a guild.",
+                    })
+                    .setEphemeral()
+                    .build()
+            );
 
         const session = this.sessions.getById(guild.id);
         if (session == null)
-            return interaction.reply({
-                content: "There's no voice connections in this guild",
-                ephemeral: true,
-            });
+            return interaction.reply(
+                ReplyBuilder.create()
+                    .addWarning({
+                        title: "There's no voice connections in this guild",
+                        description: "Start by creating one.",
+                    })
+                    .setEphemeral()
+                    .build()
+            );
 
         const disconnected = this.sessions.disconnect(session.id);
         if (disconnected)
-            return interaction.reply({
-                content: "Bye, bye!",
-                ephemeral: true,
-            });
+            return interaction.reply(
+                ReplyBuilder.create()
+                    .addEmbed({
+                        title: "Left Channel",
+                        description: "Bye, bye.",
+                    })
+                    .setEphemeral()
+                    .build()
+            );
         else
-            return interaction.reply({
-                content: "Something wrong happened while trying to disconnect.",
-                ephemeral: true,
-            });
+            return interaction.reply(
+                ReplyBuilder.create()
+                    .addError({
+                        title: "Internal Error",
+                        description:
+                            "Something wrong happened while trying to disconnect.",
+                    })
+                    .setEphemeral()
+                    .build()
+            );
     }
 }
